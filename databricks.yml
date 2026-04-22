@@ -1,0 +1,21 @@
+bundle:
+  name: clinical-trials-pipeline
+
+workspace:
+  profile: DEFAULT
+
+resources:
+  jobs:
+    ingest_bronze:
+      name: "clinical_trials_ingest_bronze"
+      tasks:
+        - task_key: ingest
+          notebook_task:
+            notebook_path: ./notebooks/01_ingest_bronze.py
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      profile: DEFAULT
