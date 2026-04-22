@@ -4,7 +4,7 @@
 # MAGIC # Bronze Ingestion — ClinicalTrials.gov
 # MAGIC
 # MAGIC Pulls raw study data from the ClinicalTrials.gov v2 API and writes it
-# MAGIC as-is into a Delta table in the bronze layer of our Unity Catalog.
+# MAGIC as-is into a Delta table in the bronze layer of the Unity Catalog.
 
 # COMMAND ----------
 
@@ -20,9 +20,9 @@ import requests
 
 # COMMAND ----------
 
-CATALOG = "main"
-SCHEMA = "default"
-BRONZE_TABLE = f"{CATALOG}.{SCHEMA}.bronze_clinical_trials"
+CATALOG = "data_engineering_case"
+SCHEMA = "bronze"
+BRONZE_TABLE = f"{CATALOG}.{SCHEMA}.clinical_trials"
 
 API_BASE = "https://clinicaltrials.gov/api/v2/studies"
 PAGE_SIZE = 100
