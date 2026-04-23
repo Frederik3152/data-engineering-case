@@ -8,10 +8,10 @@
 
 # COMMAND ----------
 
-from datetime import datetime, timezone
 
 from pyspark.sql import SparkSession, Window
 from pyspark.sql import functions as F
+from utils import fetch_audit_info
 
 spark = SparkSession.builder.getOrCreate()
 
@@ -22,16 +22,7 @@ spark = SparkSession.builder.getOrCreate()
 
 # COMMAND ----------
 
-dbutils.widgets.text("job_id", "manual")
-dbutils.widgets.text("run_id", "manual")
-dbutils.widgets.text("run_time", "")
-
-job_id = dbutils.widgets.get("job_id")
-run_id = dbutils.widgets.get("run_id")
-run_time_str = dbutils.widgets.get("run_time")
-run_time = run_time_str if run_time_str else datetime.now(timezone.utc).isoformat()
-
-print(f"job_id={job_id}  run_id={run_id}  run_time={run_time}")
+job_id, run_id, run_time = fetch_audit_info()
 
 # COMMAND ----------
 
