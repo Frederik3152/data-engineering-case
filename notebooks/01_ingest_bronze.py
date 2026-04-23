@@ -26,7 +26,7 @@ BRONZE_TABLE = f"{CATALOG}.{SCHEMA}.clinical_trials"
 
 API_BASE = "https://clinicaltrials.gov/api/v2/studies"
 PAGE_SIZE = 100
-MAX_PAGES = 10  # ~1,000 studies per run — adjust as needed
+MAX_PAGES = 10  # ~1,000 studies per run
 
 # COMMAND ----------
 
@@ -39,9 +39,20 @@ MAX_PAGES = 10  # ~1,000 studies per run — adjust as needed
 def fetch_all_studies(page_size: int = PAGE_SIZE, max_pages: int = MAX_PAGES) -> list[dict]:
     """
     Fetch studies from the ClinicalTrials.gov v2 API with pagination.
+
+    Parameters:
+    -------------
+    page_size: int
+        Number of studies to fetch per API call (max 1000).
+    max_pages: int
+        Maximum number of pages to fetch to avoid infinite loops.
+
+    Returns:
+    -------------
+    List of study records as dictionaries.
     """
     all_studies = []
-    params = {"pageSize": min(page_size, 1000)}
+    params = {"pageSize": page_size}
     page_token = None
     pages_fetched = 0
 
@@ -70,7 +81,7 @@ def fetch_all_studies(page_size: int = PAGE_SIZE, max_pages: int = MAX_PAGES) ->
 
 # COMMAND ----------
 
-studies = fetch_all_studies()
+studies = fetch_all_studies(PAGE_SIZE, MAX_PAGES)
 
 # COMMAND ----------
 
@@ -101,7 +112,7 @@ df.printSchema()
 
 # COMMAND ----------
 
-# Write (or append) to the bronze Delta table
+# Append to the bronze Delta table
 df.write.format("delta").mode("append").saveAsTable(BRONZE_TABLE)
 
 print(f"Wrote {df.count()} records to {BRONZE_TABLE}")
