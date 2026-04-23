@@ -8,10 +8,30 @@
 
 # COMMAND ----------
 
+from datetime import datetime, timezone
+
 from pyspark.sql import SparkSession, Window
 from pyspark.sql import functions as F
 
 spark = SparkSession.builder.getOrCreate()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Run context (job lineage)
+
+# COMMAND ----------
+
+dbutils.widgets.text("job_id", "manual")
+dbutils.widgets.text("run_id", "manual")
+dbutils.widgets.text("run_time", "")
+
+job_id = dbutils.widgets.get("job_id")
+run_id = dbutils.widgets.get("run_id")
+run_time_str = dbutils.widgets.get("run_time")
+run_time = run_time_str if run_time_str else datetime.now(timezone.utc).isoformat()
+
+print(f"job_id={job_id}  run_id={run_id}  run_time={run_time}")
 
 # COMMAND ----------
 
@@ -71,7 +91,14 @@ flattened = spark.table(BRONZE_TABLE).select(
 
 # Deduplicate to one row per `nct_id` by keeping the latest ingest (based on `ingested_at`)
 latest_per_study = Window.partitionBy("nct_id").orderBy(F.col("ingested_at").desc())
-silver_df = flattened.withColumn("_rn", F.row_number().over(latest_per_study)).where("_rn = 1").drop("_rn")
+silver_df = (
+    flattened.withColumn("_rn", F.row_number().over(latest_per_study))
+    .where("_rn = 1")
+    .drop("_rn")
+    .withColumn("job_id", F.lit(job_id))
+    .withColumn("run_id", F.lit(run_id))
+    .withColumn("run_time", F.lit(run_time))
+)
 
 # COMMAND ----------
 

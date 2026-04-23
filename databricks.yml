@@ -16,6 +16,10 @@ resources:
         - task_key: ingest
           notebook_task:
             notebook_path: ./notebooks/01_ingest_bronze.py
+            base_parameters:
+              job_id: "{{job.id}}"
+              run_id: "{{job.run_id}}"
+              run_time: "{{job.start_time.iso_datetime}}"
 
     transform_silver:
       name: "clinical_trials_silver"
@@ -30,6 +34,10 @@ resources:
         - task_key: transform
           notebook_task:
             notebook_path: ./notebooks/02_transform_silver.py
+            base_parameters:
+              job_id: "{{job.id}}"
+              run_id: "{{job.run_id}}"
+              run_time: "{{job.start_time.iso_datetime}}"
 
 targets:
   dev:

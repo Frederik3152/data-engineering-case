@@ -31,6 +31,24 @@ MAX_PAGES = 10  # ~1,000 studies per run
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Run context (job lineage)
+
+# COMMAND ----------
+
+dbutils.widgets.text("job_id", "manual")
+dbutils.widgets.text("run_id", "manual")
+dbutils.widgets.text("run_time", "")
+
+job_id = dbutils.widgets.get("job_id")
+run_id = dbutils.widgets.get("run_id")
+run_time_str = dbutils.widgets.get("run_time")
+run_time = run_time_str if run_time_str else datetime.now(timezone.utc).isoformat()
+
+print(f"job_id={job_id}  run_id={run_id}  run_time={run_time}")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Fetch studies from the API
 
 # COMMAND ----------
@@ -96,6 +114,9 @@ for study in studies:
             "nct_id": nct_id,
             "raw_json": json.dumps(study),
             "ingested_at": ingest_ts,
+            "job_id": job_id,
+            "run_id": run_id,
+            "run_time": run_time,
         }
     )
 
