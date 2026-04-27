@@ -39,6 +39,42 @@ resources:
               run_id: "{{job.run_id}}"
               run_time: "{{job.start_time.iso_datetime}}"
 
+    transform_gold_sponsor:
+      name: "clinical_trials_gold_sponsor"
+      trigger:
+        pause_status: "UNPAUSED"
+        table_update:
+          table_names:
+            - data_engineering_case.silver.clinical_trials
+          condition: ALL_UPDATED
+          wait_after_last_change_seconds: 60
+      tasks:
+        - task_key: transform
+          notebook_task:
+            notebook_path: ./notebooks/03_transform_gold_sponsor.py
+            base_parameters:
+              job_id: "{{job.id}}"
+              run_id: "{{job.run_id}}"
+              run_time: "{{job.start_time.iso_datetime}}"
+
+    transform_gold_condition:
+      name: "clinical_trials_gold_condition"
+      trigger:
+        pause_status: "UNPAUSED"
+        table_update:
+          table_names:
+            - data_engineering_case.silver.clinical_trials
+          condition: ALL_UPDATED
+          wait_after_last_change_seconds: 60
+      tasks:
+        - task_key: transform
+          notebook_task:
+            notebook_path: ./notebooks/04_transform_gold_condition.py
+            base_parameters:
+              job_id: "{{job.id}}"
+              run_id: "{{job.run_id}}"
+              run_time: "{{job.start_time.iso_datetime}}"
+
 targets:
   dev:
     mode: development
