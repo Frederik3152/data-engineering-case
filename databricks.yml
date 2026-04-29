@@ -1,9 +1,6 @@
 bundle:
   name: clinical-trials-pipeline
 
-workspace:
-  profile: DEFAULT
-
 resources:
   jobs:
     ingest_bronze:
@@ -81,3 +78,6 @@ targets:
     default: true
     workspace:
       profile: DEFAULT
+
+  prod:
+    mode: production
