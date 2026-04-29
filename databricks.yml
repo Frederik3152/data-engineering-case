@@ -81,3 +81,5 @@ targets:
 
   prod:
     mode: production
+    workspace:
+      root_path: /Workspace/Users/frederik.toernstroem@gmail.com/.bundle/${bundle.name}/${bundle.target}
