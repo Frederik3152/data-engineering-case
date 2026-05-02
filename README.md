@@ -2,43 +2,7 @@
 This repository represents my submission for the data engineering case as described in [Case Outline](data_engineer_case.pdf). In this case, I was tasked with building a pipeline that ingests data from ClinicalTrials.gov and using that to highlight the most important aspects of my data engineering skillset given a time constraint of 6 hours. 
 
 ## Architecture
-``` mermaid                                                                                                                                                                                                                                
-%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
-  flowchart LR
-      subgraph CICD [CI/CD]
-          direction TB
-          GH[GitHub Actions] --> DAB[Databricks Asset Bundle]
-      end
-
-      API[ClinicalTrials.gov v2 API]
-
-      subgraph Medallion [Medallion - Databricks Free Edition, serverless]
-          direction LR
-          Bronze[(Bronze<br/>clinical_trials)]
-          Silver[(Silver<br/>clinical_trials)]
-          GoldS[(Gold<br/>sponsor)]
-          GoldC[(Gold<br/>condition)]
-      end
-
-      subgraph Obs [Observability - cost and run health]
-          direction LR
-          SysRuns[(system.lakeflow.<br/>job_run_timeline)]
-          SysBill[(system.billing.usage)]
-          Dash{{AI/BI Dashboard<br/>cost + success per job}}
-      end
-
-      API -->|01_ingest_bronze<br/>cron Mon-Fri 15:00 UTC| Bronze
-      Bronze -->|02_transform_silver<br/>table trigger| Silver
-      Silver -->|03_transform_gold_sponsor<br/>table trigger| GoldS
-      Silver -->|04_transform_gold_condition<br/>table trigger| GoldC
-
-      CICD -. deploys .-> Medallion
-
-      Medallion -. job runs .-> SysRuns
-      Medallion -. DBU usage .-> SysBill
-      SysRuns --> Dash
-      SysBill --> Dash
-```
+![Architecture diagram](docs/architecture.png)
 
 ## Delivery Outline:
 For the case, I wanted to emphasize the platform / architecture aspect of Data Engineering in Databricks. I therefore focused on setting up the following:
