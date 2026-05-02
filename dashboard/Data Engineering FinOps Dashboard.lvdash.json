@@ -1,0 +1,683 @@
+{
+  "datasets": [
+    {
+      "name": "fedd8847",
+      "displayName": "cost_breakdown",
+      "queryLines": [
+        "WITH run_outcomes AS (\r\n",
+        "  SELECT\r\n",
+        "    run_id,\r\n",
+        "    MAX_BY(result_state, period_end_time) AS final_state\r\n",
+        "  FROM\r\n",
+        "    system.lakeflow.job_run_timeline\r\n",
+        "  WHERE\r\n",
+        "    result_state IS NOT NULL\r\n",
+        "  GROUP BY\r\n",
+        "    run_id\r\n",
+        "),\r\n",
+        "job_usage AS (\r\n",
+        "  SELECT\r\n",
+        "    u.sku_name,\r\n",
+        "    u.usage_date,\r\n",
+        "    REPLACE(u.usage_metadata.job_name, '[dev frederik_toernstroem] ', '') AS job_name,\r\n",
+        "    CASE WHEN u.usage_metadata.job_name LIKE '[dev%' THEN 'Dev'\r\n",
+        "    ELSE 'Prod' END AS environment,\r\n",
+        "    u.usage_metadata.job_run_id AS job_run_id,\r\n",
+        "    lp.pricing.default AS price,\r\n",
+        "    lp.currency_code AS currency,\r\n",
+        "    (u.usage_quantity * lp.pricing.default) AS actual_cost\r\n",
+        "  FROM\r\n",
+        "    system.billing.usage u\r\n",
+        "      LEFT JOIN system.billing.list_prices lp\r\n",
+        "        ON u.sku_name = lp.sku_name\r\n",
+        "        AND u.cloud = lp.cloud\r\n",
+        "        AND u.usage_unit = lp.usage_unit\r\n",
+        "        AND (\r\n",
+        "          u.usage_date BETWEEN lp.price_start_time AND lp.price_end_time\r\n",
+        "          OR lp.price_end_time IS NULL\r\n",
+        "        )\r\n",
+        "  WHERE\r\n",
+        "    1 = 1\r\n",
+        "    AND u.usage_metadata.job_name LIKE '%clinical_trials%'\r\n",
+        ")\r\n",
+        "SELECT\r\n",
+        "  ju.sku_name,\r\n",
+        "  ju.usage_date,\r\n",
+        "  ju.job_name,\r\n",
+        "  ju.job_run_id,\r\n",
+        "  ju.environment,\r\n",
+        "  ju.price,\r\n",
+        "  ju.currency,\r\n",
+        "  SUM(ju.actual_cost) AS actual_cost,\r\n",
+        "  ro.final_state AS run_status\r\n",
+        "FROM\r\n",
+        "  job_usage ju\r\n",
+        "    LEFT JOIN run_outcomes ro ON ju.job_run_id = ro.run_id\r\n",
+        "GROUP BY\r\n",
+        "  ju.sku_name,\r\n",
+        "  ju.usage_date,\r\n",
+        "  ju.job_name,\r\n",
+        "  ju.job_run_id,\r\n",
+        "  ju.environment,\r\n",
+        "  ju.price,\r\n",
+        "  ju.currency,\r\n",
+        "  ro.final_state"
+      ],
+      "columns": [
+        {
+          "displayName": "Average Cost",
+          "description": "",
+          "expression": "SUM(actual_cost) / COUNT(job_run_id) "
+        },
+        {
+          "displayName": "Number of runs",
+          "description": "",
+          "expression": "COUNT(*)"
+        },
+        {
+          "displayName": "Percentage Failed",
+          "description": "",
+          "expression": "(SUM(CASE WHEN run_status IN ('FAILED', 'TIMED_OUT', 'ERROR') THEN 1 ELSE 0 END) / COUNT(*))"
+        },
+        {
+          "displayName": "Cost of errors",
+          "description": "",
+          "expression": "SUM(IF(run_status = 'ERROR', actual_cost, 0))"
+        }
+      ]
+    },
+    {
+      "name": "b4ddcf17",
+      "displayName": "most_expensive_job",
+      "queryLines": [
+        "WITH run_outcomes AS (\r\n",
+        "  SELECT\r\n",
+        "    run_id,\r\n",
+        "    MAX_BY(result_state, period_end_time) AS final_state\r\n",
+        "  FROM\r\n",
+        "    system.lakeflow.job_run_timeline\r\n",
+        "  WHERE\r\n",
+        "    result_state IS NOT NULL\r\n",
+        "  GROUP BY\r\n",
+        "    run_id\r\n",
+        "),\r\n",
+        "job_usage AS (\r\n",
+        "  SELECT\r\n",
+        "    u.sku_name,\r\n",
+        "    u.usage_date,\r\n",
+        "    REPLACE(u.usage_metadata.job_name, '[dev frederik_toernstroem] ', '') AS job_name,\r\n",
+        "    CASE WHEN u.usage_metadata.job_name LIKE '[dev%' THEN 'Dev'\r\n",
+        "    ELSE 'Prod' END AS environment,\r\n",
+        "    u.usage_metadata.job_run_id AS job_run_id,\r\n",
+        "    lp.pricing.default AS price,\r\n",
+        "    lp.currency_code AS currency,\r\n",
+        "    (u.usage_quantity * lp.pricing.default) AS actual_cost\r\n",
+        "  FROM\r\n",
+        "    system.billing.usage u\r\n",
+        "      LEFT JOIN system.billing.list_prices lp\r\n",
+        "        ON u.sku_name = lp.sku_name\r\n",
+        "        AND u.cloud = lp.cloud\r\n",
+        "        AND u.usage_unit = lp.usage_unit\r\n",
+        "        AND (\r\n",
+        "          u.usage_date BETWEEN lp.price_start_time AND lp.price_end_time\r\n",
+        "          OR lp.price_end_time IS NULL\r\n",
+        "        )\r\n",
+        "  WHERE\r\n",
+        "    u.usage_metadata.job_name LIKE '%clinical_trials%'\r\n",
+        "),\r\n",
+        "job_run_costs AS (\r\n",
+        "  SELECT\r\n",
+        "    ju.job_name,\r\n",
+        "    ju.environment,\r\n",
+        "    SUM(ju.actual_cost) AS actual_cost\r\n",
+        "  FROM\r\n",
+        "    job_usage ju\r\n",
+        "      LEFT JOIN run_outcomes ro ON ju.job_run_id = ro.run_id\r\n",
+        "  GROUP BY\r\n",
+        "    ju.job_name,\r\n",
+        "    ju.environment\r\n",
+        ")\r\n",
+        "SELECT\r\n",
+        "  job_name,\r\n",
+        "  environment,\r\n",
+        "  actual_cost AS total_cost\r\n",
+        "FROM\r\n",
+        "  job_run_costs\r\n",
+        "ORDER BY\r\n",
+        "  actual_cost DESC\r\n",
+        "LIMIT 1"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "6fba6021",
+      "displayName": "FinOps Dashboard",
+      "layout": [
+        {
+          "widget": {
+            "name": "7bc29f72",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fedd8847",
+                  "fields": [
+                    {
+                      "name": "job_name",
+                      "expression": "`job_name`"
+                    },
+                    {
+                      "name": "measure(Average Cost)",
+                      "expression": "MEASURE(`Average Cost`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Average Run Cost"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "job_name",
+                  "axis": {
+                    "labelAngle": 45
+                  },
+                  "displayName": "Job",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Average Cost)",
+                  "displayName": "Cost [USD]",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "total-job-cost",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fedd8847",
+                  "fields": [
+                    {
+                      "name": "measure(Number of runs)",
+                      "expression": "MEASURE(`Number of runs`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Jobs Run"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Number of runs)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "03338af1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fedd8847",
+                  "fields": [
+                    {
+                      "name": "job_name",
+                      "expression": "`job_name`"
+                    },
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    },
+                    {
+                      "name": "sum(actual_cost)",
+                      "expression": "SUM(`actual_cost`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Daily Cost"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "usage_date",
+                  "displayName": "Date",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(actual_cost)",
+                  "displayName": "Cost [USD]",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "job_name",
+                  "displayName": "Job",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "clinical_trials_bronze",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 3
+                        }
+                      },
+                      {
+                        "value": "clinical_trials_silver",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 1
+                        }
+                      },
+                      {
+                        "value": "clinical_trials_gold_sponsor",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 6
+                        }
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "5e0790d9",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fedd8847",
+                  "fields": [
+                    {
+                      "name": "measure(Cost of errors)",
+                      "expression": "MEASURE(`Cost of errors`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Job Cost Failed Runs "
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Cost of errors)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "84422fa4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fedd8847",
+                  "fields": [
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    },
+                    {
+                      "name": "sku_name",
+                      "expression": "`sku_name`"
+                    },
+                    {
+                      "name": "job_name",
+                      "expression": "`job_name`"
+                    },
+                    {
+                      "name": "measure(Number of runs)",
+                      "expression": "MEASURE(`Number of runs`)"
+                    },
+                    {
+                      "name": "sum(actual_cost)",
+                      "expression": "SUM(`actual_cost`)"
+                    },
+                    {
+                      "name": "measure(Percentage Failed)",
+                      "expression": "MEASURE(`Percentage Failed`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Daily Cost Breakdown"
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "usage_date",
+                    "displayName": "Date"
+                  },
+                  {
+                    "fieldName": "sku_name",
+                    "displayName": "Databricks SKU"
+                  },
+                  {
+                    "fieldName": "job_name",
+                    "displayName": "Job"
+                  },
+                  {
+                    "fieldName": "measure(Number of runs)",
+                    "displayName": "# Runs"
+                  },
+                  {
+                    "fieldName": "sum(actual_cost)",
+                    "displayName": "Cost [USD]"
+                  },
+                  {
+                    "fieldName": "measure(Percentage Failed)",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 2
+                      },
+                      "hideGroupSeparator": true
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "b421d872",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fedd8847",
+                  "fields": [
+                    {
+                      "name": "sum(actual_cost)",
+                      "expression": "SUM(`actual_cost`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Job Cost"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(actual_cost)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "649f330a",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b4ddcf17",
+                  "fields": [
+                    {
+                      "name": "job_name",
+                      "expression": "`job_name`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Most Expensive Job"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "job_name",
+                  "rowNumber": 0
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "d4774a85",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "filter-for-job",
+            "queries": [
+              {
+                "name": "dashboards/01f1400c62b91adb8600b708dab6a644/datasets/01f1400c669113e0b69d212382c782b4_run_status",
+                "query": {
+                  "datasetName": "fedd8847",
+                  "fields": [
+                    {
+                      "name": "run_status",
+                      "expression": "`run_status`"
+                    },
+                    {
+                      "name": "run_status_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Filter for job"
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "run_status",
+                    "queryName": "dashboards/01f1400c62b91adb8600b708dab6a644/datasets/01f1400c669113e0b69d212382c782b4_run_status"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "environment",
+            "queries": [
+              {
+                "name": "dashboards/01f1400c62b91adb8600b708dab6a644/datasets/01f1400c669113e0b69d212382c782b4_environment",
+                "query": {
+                  "datasetName": "fedd8847",
+                  "fields": [
+                    {
+                      "name": "environment",
+                      "expression": "`environment`"
+                    },
+                    {
+                      "name": "environment_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Environment"
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "environment",
+                    "queryName": "dashboards/01f1400c62b91adb8600b708dab6a644/datasets/01f1400c669113e0b69d212382c782b4_environment"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}

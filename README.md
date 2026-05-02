@@ -12,7 +12,7 @@ This repository represents my submission for the data engineering case as descri
 
       API[ClinicalTrials.gov v2 API]                                                                                                                                                                                                                                                    
   
-      subgraph Medallion [Medallion - Databricks Free Edition, serverless]
+      subgraph Medallion [Medallion - Databricks Free Edition]
           direction LR                                                                                                                                                                                                                                                                
           Bronze[(Bronze<br/>clinical_trials)]
           Silver[(Silver<br/>clinical_trials)]                                                                                                                                                                                                                                          
@@ -61,6 +61,7 @@ Jobs/pipelines operationalization:
 
 CI/CD maturity:
 - Replace PAT with a service principal and OIDC.
+- Add dashboard and schemas to bundle definition. 
 - Enforce PRs rather than allowing direct commit to main. 
 
 FinOps setup:
