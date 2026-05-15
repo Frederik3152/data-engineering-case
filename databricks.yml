@@ -8,7 +8,7 @@ resources:
       schedule:
         quartz_cron_expression: "0 0 15 ? * MON-FRI" # Every weekday at 3 PM UTC (matches https://clinicaltrials.gov/data-api/api#extapi)                                                                                                                                                                                                                                         
         timezone_id: "UTC"                                                                                                                                                                                                                                                                   
-        pause_status: "UNPAUSED" 
+        pause_status: "PAUSED" 
       tasks:
         - task_key: ingest
           notebook_task:
